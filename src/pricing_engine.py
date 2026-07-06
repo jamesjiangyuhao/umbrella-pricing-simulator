@@ -14,6 +14,8 @@ CREDIT_FACTOR = {"High": 0.92, "Medium": 1.00, "Low": 1.14}
 HOME_FACTOR = {"Entry": 0.90, "Standard": 1.00, "Premium": 1.13, "High Net Worth": 1.31}
 URBAN_FACTOR = {"Urban": 1.08, "Suburban": 1.00, "Rural": 0.94}
 STATE_FACTOR = {f"S{i:02d}": 0.9 + (i % 6) * 0.04 + (0.08 if i in [4, 9, 11] else 0) for i in range(1, 13)}
+SYNTHETIC_MINIMUM_PRICE = 400
+SYNTHETIC_BASELINE_ADJUSTMENT = 240
 
 
 def load_profiles(path=DATA_DIR / "synthetic_profiles.csv"):
@@ -70,7 +72,8 @@ def simulate_all_carriers(df):
         out = df.copy()
         out["carrier"] = carrier
         out["risk_score"] = out.apply(calculate_risk_score, axis=1)
-        out["simulated_price"] = out.apply(fn, axis=1).round(2)
+        adjusted_price = out.apply(fn, axis=1) + SYNTHETIC_BASELINE_ADJUSTMENT
+        out["simulated_price"] = np.maximum(adjusted_price, SYNTHETIC_MINIMUM_PRICE).round(2)
         rows.append(out)
     return pd.concat(rows, ignore_index=True)
 
@@ -94,4 +97,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

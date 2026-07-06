@@ -14,9 +14,9 @@ import seaborn as sns
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "outputs"
 CARRIER_PALETTE = {
-    "Carrier_A": "#2563eb",
-    "Carrier_B": "#f97316",
-    "Carrier_C": "#16a34a",
+    "Carrier_A": "#4f7ecb",
+    "Carrier_B": "#d9904f",
+    "Carrier_C": "#5a9b73",
 }
 CARRIER_LABELS = {
     "Carrier_A": "Carrier A",
@@ -37,26 +37,28 @@ def _save(fig, filename):
 def plot_price_distribution_by_carrier(df, filename="price_distribution_by_carrier.png"):
     fig, ax = plt.subplots(figsize=(10, 5.6))
     bins = np.arange(400, 2001, 100)
-    centers = bins[:-1] + np.diff(bins) / 2
-    offsets = {"Carrier_A": -26, "Carrier_B": 0, "Carrier_C": 26}
+    bucket_labels = [f"${int(start)}-${int(end)}" for start, end in zip(bins[:-1], bins[1:])]
+    x = np.arange(len(bucket_labels))
+    offsets = {"Carrier_A": -0.27, "Carrier_B": 0, "Carrier_C": 0.27}
     for carrier, carrier_df in df.groupby("carrier"):
         clipped = carrier_df["simulated_price"]
         counts, _ = np.histogram(clipped, bins=bins)
         percentages = counts / len(carrier_df) * 100
         color = CARRIER_PALETTE.get(carrier, "#2563eb")
         ax.bar(
-            centers + offsets.get(carrier, 0),
+            x + offsets.get(carrier, 0),
             percentages,
-            width=24,
+            width=0.25,
             label=CARRIER_LABELS.get(carrier, carrier),
             color=color,
             alpha=0.86,
         )
     ax.set_title("Simulated Personal Umbrella Price Distribution by Carrier")
-    ax.set_xlabel("Simulated Annual Price")
+    ax.set_xlabel("Simulated Annual Price Bucket")
     ax.set_ylabel("Percentage of Portfolio")
-    ax.set_xlim(400, 2000)
     ax.set_ylim(bottom=0)
+    ax.set_xticks(x)
+    ax.set_xticklabels(bucket_labels, rotation=35, ha="right")
     ax.yaxis.set_major_formatter(lambda value, _: f"{value:.0f}%")
     ax.legend(title="")
     ax.grid(axis="y", alpha=0.25)
@@ -72,6 +74,7 @@ def plot_segment_comparison(df, filename="segment_price_comparison.png"):
     ax.set_title("Average Simulated Price by Risk Segment")
     ax.set_xlabel("")
     ax.set_ylabel("Average Simulated Price")
+    ax.set_ylim(400, max(620, sample["avg_price"].max() + 20))
     ax.legend(title="")
     return _save(fig, filename)
 
