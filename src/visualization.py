@@ -6,12 +6,18 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "outputs"
+CARRIER_PALETTE = {
+    "Carrier_A": "#2563eb",
+    "Carrier_B": "#0f766e",
+    "Carrier_C": "#7c3aed",
+}
 
 
 def _save(fig, filename):
@@ -25,18 +31,30 @@ def _save(fig, filename):
 
 def plot_price_distribution_by_carrier(df, filename="price_distribution_by_carrier.png"):
     fig, ax = plt.subplots(figsize=(10, 5.6))
-    sample = df.sample(min(len(df), 60_000), random_state=42)
-    sns.histplot(data=sample, x="simulated_price", hue="carrier", bins=45, stat="density", common_norm=False, alpha=0.35, ax=ax)
+    bins = np.arange(400, 2001, 100)
+    centers = bins[:-1] + np.diff(bins) / 2
+    for carrier, carrier_df in df.groupby("carrier"):
+        clipped = carrier_df["simulated_price"]
+        counts, _ = np.histogram(clipped, bins=bins)
+        percentages = counts / len(carrier_df) * 100
+        color = CARRIER_PALETTE.get(carrier, "#2563eb")
+        ax.plot(centers, percentages, marker="o", linewidth=2.4, label=carrier, color=color)
+        ax.fill_between(centers, percentages, alpha=0.12, color=color)
     ax.set_title("Simulated Personal Umbrella Price Distribution by Carrier")
     ax.set_xlabel("Simulated Annual Price")
-    ax.set_ylabel("Density")
+    ax.set_ylabel("Percentage of Portfolio")
+    ax.set_xlim(400, 2000)
+    ax.set_ylim(bottom=0)
+    ax.yaxis.set_major_formatter(lambda value, _: f"{value:.0f}%")
+    ax.legend(title="")
+    ax.grid(axis="y", alpha=0.25)
     return _save(fig, filename)
 
 
 def plot_segment_comparison(df, filename="segment_price_comparison.png"):
     sample = df.groupby(["risk_segment", "carrier"], observed=True, as_index=False).agg(avg_price=("simulated_price", "mean"))
     fig, ax = plt.subplots(figsize=(9.5, 5.4))
-    sns.barplot(data=sample, x="risk_segment", y="avg_price", hue="carrier", palette="Set2", ax=ax)
+    sns.barplot(data=sample, x="risk_segment", y="avg_price", hue="carrier", palette=CARRIER_PALETTE, ax=ax)
     ax.set_title("Average Simulated Price by Risk Segment")
     ax.set_xlabel("")
     ax.set_ylabel("Average Simulated Price")
